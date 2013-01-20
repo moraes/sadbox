@@ -1,3 +1,7 @@
+// Copyright 2013 Rodrigo Moraes. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xmlfilter
 
 import (
@@ -23,12 +27,16 @@ func TestNextNames(t *testing.T) {
 				</font>
 			</small>
 			<a href="/path/to/somewhere">
-				Baz
+				<i>
+					Baz
+				</i>
 			</a>
 		</p>
 
 		<p>
-			Ding
+			<span>
+				Ding
+			</span>
 		</p>
 	`
 

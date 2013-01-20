@@ -1,3 +1,7 @@
+// Copyright 2013 Rodrigo Moraes. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xmlfilter
 
 import (
@@ -72,24 +76,13 @@ Calling the following:
 
 	NextNames(xml.Name{Local:"p"}, xml.Name{Local:"a"}, xml.Name{Local:"sup"})
 
-...results in a Node tree that contains the following HTML:
+...results in a Node tree that contains the following HTML structure:
 
-	<p>
-		<a name="foo"/>
-		Foo
-		<sup>
-			Bar
-		</sup>
-		<a href="/path/to/somewhere">
-			Baz
-		</a>
-	</p>
+	<p><a></a>Foo<sup>Bar</sup><a>Baz</a></p>
 
 And making the same call again results in a Node with:
 
-	<p>
-		Ding
-	</p>
+	<p>Ding</p>
 */
 func NextNames(d *xml.Decoder, names ...xml.Name) (Node, error) {
 	t, err := skipUntilStartElement(d, names)
