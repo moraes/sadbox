@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package xmlfilter provides helpers to work with encoding/xml.
 package xmlfilter
 
 import (
@@ -30,8 +31,6 @@ func (n Node) String() string {
 		return b.String()
 	case xml.CharData:
 		return string(t)
-	case string:
-		return t
 	}
 	panic(fmt.Errorf("unexpected %T", n.Token))
 }
@@ -85,7 +84,7 @@ And making the same call again results in a Node with:
 	<p>Ding</p>
 */
 func NextNames(d *xml.Decoder, names ...xml.Name) (Node, error) {
-	t, err := skipUntilStartElement(d, names)
+	t, err := findElement(d, names)
 	if err != nil {
 		return Node{}, err
 	}
@@ -96,7 +95,8 @@ func NextNames(d *xml.Decoder, names ...xml.Name) (Node, error) {
 	return Node{Token: t, List: list}, nil
 }
 
-func skipUntilStartElement(d *xml.Decoder, names []xml.Name) (xml.StartElement, error) {
+// findElement skips everything until we find an element of the given name.
+func findElement(d *xml.Decoder, names []xml.Name) (xml.StartElement, error) {
 	for {
 		t, err := d.RawToken()
 		if err != nil {
@@ -113,6 +113,7 @@ func skipUntilStartElement(d *xml.Decoder, names []xml.Name) (xml.StartElement, 
 	panic("unreachable")
 }
 
+// parseList returns all child nodes of the given name, plus CharData.
 func parseList(d *xml.Decoder, names, stack []xml.Name) ([]Node, error) {
 	var c []Node
 	for len(stack) > 0 {
@@ -150,19 +151,17 @@ func parseList(d *xml.Decoder, names, stack []xml.Name) ([]Node, error) {
 			}
 		case xml.CharData:
 			if b := bytes.TrimSpace(t); len(b) > 0 {
-				// To pass xml.CharData, we would need a copy of b:
-				//
-				//     b1 := make(xml.CharData, len(b))
-				//     copy(b1, b)
-				//
-				// Instead of this, we just convert it to string.
-				c = append(c, Node{Token: string(b)})
+				// Need to make a copy of b.
+				b1 := make(xml.CharData, len(b))
+				copy(b1, b)
+				c = append(c, Node{Token: b1})
 			}
 		}
 	}
 	return c, nil
 }
 
+// popName removes an expected name from a list, for balanced closing tags.
 func popName(names []xml.Name, name xml.Name) ([]xml.Name, error) {
 	size := len(names)
 	if size == 0 {
