@@ -24,6 +24,8 @@ func (n Node) String() string {
 		}
 		fmt.Fprintf(b, "</%s>", t.Name.Local)
 		return b.String()
+	case xml.CharData:
+		return string(t)
 	case string:
 		return t
 	}
@@ -31,12 +33,12 @@ func (n Node) String() string {
 }
 
 /*
-NextNames looks for the CharData contained in the given tag names. It trims spaces
-from the CharData and ignores it if it is empty.
+NextNames looks for the CharData contained in the given tag names. It trims
+spaces from the CharData and ignores it if it is empty.
 
 It expects well-formed XML: mismatching closing tags will result in error.
 
-Given the following HTML snippet:
+Given the following horrible HTML snippet:
 
 	<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 	<p>
@@ -54,66 +56,40 @@ Given the following HTML snippet:
 			</font>
 		</small>
 		<a href="/path/to/somewhere">
-			Baz
+			<i>
+				Baz
+			</i>
 		</a>
 	</p>
 
 	<p>
-		Ding
+		<span>
+			Ding
+		</span>
 	</p>
 
 Calling the following:
 
 	NextNames(xml.Name{Local:"p"}, xml.Name{Local:"a"}, xml.Name{Local:"sup"})
 
-...results in:
+...results in a Node tree that contains the following HTML:
 
-	xmlfilter.Node{
-		xmlfilter.Node{
-			Token: xml.StartElement{Name:xml.Name{Space:"", Local:"p"}, Attr:[]xml.Attr{}},
-			List:  []xmlfilter.Node{
-				xmlfilter.Node{
-					Token: xml.StartElement{Name:xml.Name{Space:"", Local:"a"}, Attr:[]xml.Attr{xml.Attr{Name:xml.Name{Space:"", Local:"name"}, Value:"foo"}}},
-					List:  []xmlfilter.Node(nil),
-				},
-				xmlfilter.Node{
-					Token: []byte{0x61, 0x7a, 0xa},
-					List:  []xmlfilter.Node(nil),
-				},
-				xmlfilter.Node{
-					Token: xml.StartElement{Name:xml.Name{Space:"", Local:"sup"}, Attr:[]xml.Attr{}},
-					List:  []xmlfilter.Node{
-						xmlfilter.Node{
-							Token: []byte{0x9, 0x9, 0x9},
-							List:  []xmlfilter.Node(nil),
-						},
-					},
-				},
-				xmlfilter.Node{
-					Token: xml.StartElement{Name:xml.Name{Space:"", Local:"a"}, Attr:[]xml.Attr{xml.Attr{Name:xml.Name{Space:"", Local:"href"}, Value:"/path/to/somewhere"}}},
-					List:  []xmlfilter.Node{
-						xmlfilter.Node{
-							Token: []byte{0x42, 0x61, 0x7a},
-							List:  []xmlfilter.Node(nil),
-						},
-					},
-				},
-			},
-		},
-	}
+	<p>
+		<a name="foo"/>
+		Foo
+		<sup>
+			Bar
+		</sup>
+		<a href="/path/to/somewhere">
+			Baz
+		</a>
+	</p>
 
-And making the same call again results in:
+And making the same call again results in a Node with:
 
-	xmlfilter.Node{
-		Token: xml.StartElement{Name:xml.Name{Space:"", Local:"p"}, Attr:[]xml.Attr{}},
-		List:  []xmlfilter.Node{
-			xmlfilter.Node{
-				Token: []byte{0x44, 0x69, 0x6e, 0x67},
-				List:  []xmlfilter.Node(nil),
-			},
-		},
-	}
-
+	<p>
+		Ding
+	</p>
 */
 func NextNames(d *xml.Decoder, names ...xml.Name) (Node, error) {
 	t, err := skipUntilStartElement(d, names)
@@ -181,8 +157,12 @@ func parseList(d *xml.Decoder, names, stack []xml.Name) ([]Node, error) {
 			}
 		case xml.CharData:
 			if b := bytes.TrimSpace(t); len(b) > 0 {
-				// This is very weird: must convert to string because
-				// passing xml.CharData(b) or simply b has wrong result.
+				// To pass xml.CharData, we would need a copy of b:
+				//
+				//     b1 := make(xml.CharData, len(b))
+				//     copy(b1, b)
+				//
+				// Instead of this, we just convert it to string.
 				c = append(c, Node{Token: string(b)})
 			}
 		}
