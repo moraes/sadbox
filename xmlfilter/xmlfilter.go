@@ -117,7 +117,7 @@ func findElement(d *xml.Decoder, names []xml.Name) (xml.StartElement, error) {
 func parseList(d *xml.Decoder, names, stack []xml.Name) ([]Node, error) {
 	var c []Node
 	for len(stack) > 0 {
-		token, err := d.RawToken()
+		t, err := d.RawToken()
 		if err != nil {
 			return nil, fmt.Errorf("unclosed tags: %v", stack)
 		}
@@ -129,7 +129,7 @@ func parseList(d *xml.Decoder, names, stack []xml.Name) ([]Node, error) {
 		//   xml.EndElement
 		//   xml.ProcInst
 		//   xml.StartElement
-		switch t := token.(type) {
+		switch t := t.(type) {
 		case xml.StartElement:
 			found := false
 			for _, v := range names {
